@@ -143,7 +143,11 @@ class Config(BaseSettings):
         """Get matched provider config (api_key, api_base, extra_headers). Falls back to first available."""
         model = (model or self.agents.defaults.model).lower()
         p = self.providers
-        # Keyword → provider mapping (order matters: gateways first)
+        
+        # Collect all available providers with API keys
+        all_providers = []
+        
+        # Add predefined providers
         keyword_map = {
             "aihubmix": p.aihubmix, "openrouter": p.openrouter,
             "deepseek": p.deepseek, "anthropic": p.anthropic, "claude": p.anthropic,
@@ -152,27 +156,63 @@ class Config(BaseSettings):
             "dashscope": p.dashscope, "qwen": p.dashscope,
             "groq": p.groq, "moonshot": p.moonshot, "kimi": p.moonshot, "vllm": p.vllm,
         }
+        
+        # Add keyword-matched providers first (higher priority)
         for kw, provider in keyword_map.items():
             if kw in model and provider.api_key:
-                return provider
+                all_providers.append(provider)
         
-        # Check dynamic providers (lc147, lc157, etc.)
-        extra_fields = getattr(p, '__pydantic_extra__', {})
-        for provider_name, provider_data in extra_fields.items():
-            if provider_name in model and isinstance(provider_data, dict) and provider_data.get('api_key'):
-                # Convert dict to ProviderConfig object
-                return ProviderConfig(**provider_data)
-        # Fallback: gateways first (can serve any model), then specific providers
-        all_providers = [p.openrouter, p.aihubmix, p.anthropic, p.openai, p.deepseek,
-                         p.gemini, p.zhipu, p.dashscope, p.moonshot, p.vllm, p.groq]
-        
-        # Add all dynamic providers from the config (including lc147, lc157, etc.)
+        # Add dynamic providers (lc147, lc157, etc.)  
         extra_fields = getattr(p, '__pydantic_extra__', {})
         for provider_name, provider_data in extra_fields.items():
             if isinstance(provider_data, dict) and provider_data.get('api_key'):
-                all_providers.append(ProviderConfig(**provider_data))
+                provider_config = ProviderConfig(**provider_data)
+                all_providers.append(provider_config)
+                # Also add keyword mapping for exact match
+                keyword_map[provider_name] = provider_config
         
+        # Fallback to any provider with API key
+        if not all_providers:
+            all_providers = [p.openrouter, p.aihubmix, p.anthropic, p.openai, p.deepseek,
+                             p.gemini, p.zhipu, p.dashscope, p.moonshot, p.vllm, p.groq]
+            extra_fields = getattr(p, '__pydantic_extra__', {})
+            for provider_name, provider_data in extra_fields.items():
+                if isinstance(provider_data, dict) and provider_data.get('api_key'):
+                    all_providers.append(ProviderConfig(**provider_data))
+        
+        # Return the first provider with an API key
         return next((pr for pr in all_providers if pr and pr.api_key), None)
+    
+    def get_all_providers(self, model: str | None = None) -> list[tuple[str, ProviderConfig]]:
+        """Get all available providers with API keys for debugging."""
+        model = (model or self.agents.defaults.model).lower()
+        p = self.providers
+        
+        available = []
+        
+        # Keyword → provider mapping
+        keyword_map = {
+            "aihubmix": p.aihubmix, "openrouter": p.openrouter,
+            "deepseek": p.deepseek, "anthropic": p.anthropic, "claude": p.anthropic,
+            "openai": p.openai, "gpt": p.openai, "gemini": p.gemini,
+            "zhipu": p.zhipu, "glm": p.zhipu, "zai": p.zhipu,
+            "dashscope": p.dashscope, "qwen": p.dashscope,
+            "groq": p.groq, "moonshot": p.moonshot, "kimi": p.moonshot, "vllm": p.vllm,
+        }
+        
+        # Add predefined providers
+        for kw, provider in keyword_map.items():
+            if provider.api_key:
+                available.append((kw, provider))
+        
+        # Add dynamic providers
+        extra_fields = getattr(p, '__pydantic_extra__', {})
+        for provider_name, provider_data in extra_fields.items():
+            if isinstance(provider_data, dict) and provider_data.get('api_key'):
+                provider_config = ProviderConfig(**provider_data)
+                available.append((provider_name, provider_config))
+        
+        return available
 
     def get_api_key(self, model: str | None = None) -> str | None:
         """Get API key for the given model. Falls back to first available key."""
