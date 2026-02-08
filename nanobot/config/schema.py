@@ -141,13 +141,28 @@ class Config(BaseSettings):
             "dashscope": p.dashscope, "qwen": p.dashscope,
             "groq": p.groq, "moonshot": p.moonshot, "kimi": p.moonshot, "vllm": p.vllm,
         }
+        # Add dynamic providers (like lc147) to keyword map
+        for provider_name in dir(p):
+            if (provider_name not in ['aihubmix', 'openrouter', 'deepseek', 'anthropic', 'openai', 
+                                   'gemini', 'zhipu', 'dashscope', 'moonshot', 'vllm', 'groq'] 
+                and not provider_name.startswith('_') 
+                and hasattr(getattr(p, provider_name), 'api_key')):
+                keyword_map[provider_name] = getattr(p, provider_name)
         for kw, provider in keyword_map.items():
             if kw in model and provider.api_key:
                 return provider
         # Fallback: gateways first (can serve any model), then specific providers
         all_providers = [p.openrouter, p.aihubmix, p.anthropic, p.openai, p.deepseek,
                          p.gemini, p.zhipu, p.dashscope, p.moonshot, p.vllm, p.groq]
-        return next((pr for pr in all_providers if pr.api_key), None)
+        
+        # Add dynamic providers (like lc147) to fallback list
+        dynamic_providers = [getattr(p, name) for name in dir(p) 
+                          if name not in ['aihubmix', 'openrouter', 'deepseek', 'anthropic', 'openai', 
+                                      'gemini', 'zhipu', 'dashscope', 'moonshot', 'vllm', 'groq'] 
+                          and not name.startswith('_') and hasattr(getattr(p, name), 'api_key')]
+        all_providers.extend(dynamic_providers)
+        
+        return next((pr for pr in all_providers if pr and pr.api_key), None)
 
     def get_api_key(self, model: str | None = None) -> str | None:
         """Get API key for the given model. Falls back to first available key."""
