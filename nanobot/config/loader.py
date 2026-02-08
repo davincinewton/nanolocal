@@ -35,7 +35,7 @@ def load_config(config_path: Path | None = None) -> Config:
             with open(path) as f:
                 data = json.load(f)
             data = _migrate_config(data)
-            return Config.model_validate(convert_keys(data))
+            return Config.model_validate(data)
         except (json.JSONDecodeError, ValueError) as e:
             print(f"Warning: Failed to load config from {path}: {e}")
             print("Using default configuration.")
@@ -54,9 +54,8 @@ def save_config(config: Config, config_path: Path | None = None) -> None:
     path = config_path or get_config_path()
     path.parent.mkdir(parents=True, exist_ok=True)
     
-    # Convert to camelCase format
+    # Use snake_case format for consistency
     data = config.model_dump()
-    data = convert_to_camel(data)
     
     with open(path, "w") as f:
         json.dump(data, f, indent=2)
@@ -64,11 +63,11 @@ def save_config(config: Config, config_path: Path | None = None) -> None:
 
 def _migrate_config(data: dict) -> dict:
     """Migrate old config formats to current."""
-    # Move tools.exec.restrictToWorkspace → tools.restrictToWorkspace
+    # Move tools.exec.restrictToWorkspace → tools.restrict_to_workspace
     tools = data.get("tools", {})
     exec_cfg = tools.get("exec", {})
-    if "restrictToWorkspace" in exec_cfg and "restrictToWorkspace" not in tools:
-        tools["restrictToWorkspace"] = exec_cfg.pop("restrictToWorkspace")
+    if "restrictToWorkspace" in exec_cfg and "restrict_to_workspace" not in tools:
+        tools["restrict_to_workspace"] = exec_cfg.pop("restrictToWorkspace")
     return data
 
 
