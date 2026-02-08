@@ -81,7 +81,17 @@ class ProvidersConfig(BaseModel):
     gemini: ProviderConfig = Field(default_factory=ProviderConfig)
     moonshot: ProviderConfig = Field(default_factory=ProviderConfig)
     aihubmix: ProviderConfig = Field(default_factory=ProviderConfig)  # AiHubMix API gateway
-    lc147: ProviderConfig = Field(default_factory=ProviderConfig)  # Custom local LLM server
+    
+    # Allow additional dynamic providers (lc147, lc157, etc.)
+    model_config = {"extra": "allow"}
+    
+    def __getattr__(self, name):
+        """Dynamic access to provider configs."""
+        # Check if this is a provider in extra fields
+        if name in self.__dict__.get('__pydantic_extra__', {}):
+            return self.__dict__['__pydantic_extra__'][name]
+        # Return default empty provider for undefined providers
+        return ProviderConfig()
 
 
 class GatewayConfig(BaseModel):
@@ -141,14 +151,26 @@ class Config(BaseSettings):
             "zhipu": p.zhipu, "glm": p.zhipu, "zai": p.zhipu,
             "dashscope": p.dashscope, "qwen": p.dashscope,
             "groq": p.groq, "moonshot": p.moonshot, "kimi": p.moonshot, "vllm": p.vllm,
-            "lc147": p.lc147,  # Custom provider
         }
         for kw, provider in keyword_map.items():
             if kw in model and provider.api_key:
                 return provider
+        
+        # Check dynamic providers (lc147, lc157, etc.)
+        extra_fields = getattr(p, '__pydantic_extra__', {})
+        for provider_name, provider_config in extra_fields.items():
+            if provider_name in model and provider_config.api_key:
+                return provider_config
         # Fallback: gateways first (can serve any model), then specific providers
         all_providers = [p.openrouter, p.aihubmix, p.anthropic, p.openai, p.deepseek,
-                         p.gemini, p.zhipu, p.dashscope, p.moonshot, p.vllm, p.groq, p.lc147]
+                         p.gemini, p.zhipu, p.dashscope, p.moonshot, p.vllm, p.groq]
+        
+        # Add all dynamic providers from the config (including lc147, lc157, etc.)
+        extra_fields = getattr(p, '__pydantic_extra__', {})
+        for provider_name, provider_config in extra_fields.items():
+            if provider_config.api_key:
+                all_providers.append(provider_config)
+        
         return next((pr for pr in all_providers if pr and pr.api_key), None)
 
     def get_api_key(self, model: str | None = None) -> str | None:
