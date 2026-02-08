@@ -299,6 +299,8 @@ def agent(
         bus=bus,
         provider=provider,
         workspace=config.workspace_path,
+        model=config.agents.defaults.model,
+        max_iterations=config.agents.defaults.max_tool_iterations,
         searxng_url=config.tools.web.search.searxng_url, 
         exec_config=config.tools.exec,
         restrict_to_workspace=config.tools.restrict_to_workspace,
