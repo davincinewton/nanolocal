@@ -158,18 +158,19 @@ class Config(BaseSettings):
         
         # Check dynamic providers (lc147, lc157, etc.)
         extra_fields = getattr(p, '__pydantic_extra__', {})
-        for provider_name, provider_config in extra_fields.items():
-            if provider_name in model and provider_config.api_key:
-                return provider_config
+        for provider_name, provider_data in extra_fields.items():
+            if provider_name in model and isinstance(provider_data, dict) and provider_data.get('api_key'):
+                # Convert dict to ProviderConfig object
+                return ProviderConfig(**provider_data)
         # Fallback: gateways first (can serve any model), then specific providers
         all_providers = [p.openrouter, p.aihubmix, p.anthropic, p.openai, p.deepseek,
                          p.gemini, p.zhipu, p.dashscope, p.moonshot, p.vllm, p.groq]
         
         # Add all dynamic providers from the config (including lc147, lc157, etc.)
         extra_fields = getattr(p, '__pydantic_extra__', {})
-        for provider_name, provider_config in extra_fields.items():
-            if provider_config.api_key:
-                all_providers.append(provider_config)
+        for provider_name, provider_data in extra_fields.items():
+            if isinstance(provider_data, dict) and provider_data.get('api_key'):
+                all_providers.append(ProviderConfig(**provider_data))
         
         return next((pr for pr in all_providers if pr and pr.api_key), None)
 
