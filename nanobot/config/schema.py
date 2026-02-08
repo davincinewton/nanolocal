@@ -159,7 +159,8 @@ class Config(BaseSettings):
         
         # Add keyword-matched providers first (higher priority)
         for kw, provider in keyword_map.items():
-            if kw in model and provider.api_key:
+            # Use exact prefix matching to avoid partial matches
+            if model.startswith(kw + '/') and provider.api_key:
                 all_providers.append(provider)
         
         # Add dynamic providers (lc147, lc157, etc.)  
@@ -167,9 +168,11 @@ class Config(BaseSettings):
         for provider_name, provider_data in extra_fields.items():
             if isinstance(provider_data, dict) and provider_data.get('api_key'):
                 provider_config = ProviderConfig(**provider_data)
-                all_providers.append(provider_config)
-                # Also add keyword mapping for exact match
+                # Add to keyword map for exact prefix matching
                 keyword_map[provider_name] = provider_config
+                # Check if this provider matches the model exactly
+                if model.startswith(provider_name + '/'):
+                    all_providers.append(provider_config)
         
         # Fallback to any provider with API key
         if not all_providers:
