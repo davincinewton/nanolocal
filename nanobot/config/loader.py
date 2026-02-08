@@ -34,6 +34,7 @@ def load_config(config_path: Path | None = None) -> Config:
         try:
             with open(path) as f:
                 data = json.load(f)
+            data = convert_keys(data)
             data = _migrate_config(data)
             return Config.model_validate(data)
         except (json.JSONDecodeError, ValueError) as e:
