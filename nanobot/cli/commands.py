@@ -354,21 +354,14 @@ def channels_status():
     table.add_column("Enabled", style="green")
     table.add_column("Configuration", style="yellow")
 
-    # WhatsApp
-    wa = config.channels.whatsapp
-    table.add_row(
-        "WhatsApp",
-        "✓" if wa.enabled else "✗",
-        wa.bridge_url
-    )
-
+# Discord
     dc = config.channels.discord
     table.add_row(
         "Discord",
         "✓" if dc.enabled else "✗",
         dc.gateway_url
     )
-    
+ 
     # Telegram
     tg = config.channels.telegram
     tg_config = f"token: {tg.token[:10]}..." if tg.token else "[dim]not configured[/dim]"
@@ -382,12 +375,13 @@ def channels_status():
 
 
 def _get_bridge_dir() -> Path:
-    """Get the bridge directory, setting it up if needed."""
+    """Get the bridge directory (deprecated - used for WhatsApp)."""
     import shutil
     import subprocess
     
-    # User's bridge location
+    # User's bridge location (no longer used)
     user_bridge = Path.home() / ".nanobot" / "bridge"
+    return user_bridge
     
     # Check if already built
     if (user_bridge / "dist" / "index.js").exists():
@@ -441,20 +435,10 @@ def _get_bridge_dir() -> Path:
 
 @channels_app.command("login")
 def channels_login():
-    """Link device via QR code."""
-    import subprocess
-    
-    bridge_dir = _get_bridge_dir()
-    
-    console.print(f"{__logo__} Starting bridge...")
-    console.print("Scan the QR code to connect.\n")
-    
-    try:
-        subprocess.run(["npm", "start"], cwd=bridge_dir, check=True)
-    except subprocess.CalledProcessError as e:
-        console.print(f"[red]Bridge failed: {e}[/red]")
-    except FileNotFoundError:
-        console.print("[red]npm not found. Please install Node.js.[/red]")
+    """Link device (deprecated - removed WhatsApp support)."""
+    console.print("[yellow]WhatsApp channel support has been removed.[/yellow]")
+    console.print("Available channels: Telegram, Discord")
+    return
 
 
 # ============================================================================
@@ -521,7 +505,7 @@ def cron_add(
     at: str = typer.Option(None, "--at", help="Run once at time (ISO format)"),
     deliver: bool = typer.Option(False, "--deliver", "-d", help="Deliver response to channel"),
     to: str = typer.Option(None, "--to", help="Recipient for delivery"),
-    channel: str = typer.Option(None, "--channel", help="Channel for delivery (e.g. 'telegram', 'whatsapp')"),
+    channel: str = typer.Option(None, "--channel", help="Channel for delivery (e.g. 'telegram', 'discord')"),
 ):
     """Add a scheduled job."""
     from nanobot.config.loader import get_data_dir
