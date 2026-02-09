@@ -53,9 +53,10 @@ def onboard():
         if not typer.confirm("Overwrite?"):
             raise typer.Exit()
     
-    # Create default config
-    config = Config()
-    save_config(config)
+    # Create default config (only if doesn't exist)
+    if not config_path.exists():
+        config = Config()
+        save_config(config)
     console.print(f"[green]✓[/green] Created config at {config_path}")
     
     # Create workspace
@@ -64,15 +65,72 @@ def onboard():
     
     # Create default bootstrap files
     _create_workspace_templates(workspace)
+    _create_default_config(get_config_path())
     
     console.print(f"\n{__logo__} nanobot is ready!")
     console.print("\nNext steps:")
     console.print("  1. Add your API key to [cyan]~/.nanobot/config.json[/cyan]")
     console.print("     Get one at: https://openrouter.ai/keys")
     console.print("  2. Chat: [cyan]nanobot agent -m \"Hello!\"[/cyan]")
-    console.print("\n[dim]Want Telegram/WhatsApp? See: https://github.com/HKUDS/nanobot#-chat-apps[/dim]")
+    console.print("  3. Start gateway: [cyan]nanobot gateway[/cyan]")
+    console.print("\n[dim]Want to connect Telegram? Configure token in config.json[/dim]")
 
 
+
+
+def _create_default_config(config_path: Path) -> None:
+    """Create a clean default config with only Telegram channel support."""
+    import json
+    from nanobot.config.loader import save_config
+    from nanobot.config.schema import Config
+    
+    default_config = {
+        "providers": {
+            "openrouter": {
+                "apiKey": "sk-or-v1-xxx",
+                "apiBase": "https://openrouter.ai/api/v1"
+            }
+        },
+        "agents": {
+            "defaults": {
+                "model": "anthropic/claude-3-haiku",
+                "workspace": "~/.nanobot/workspace",
+                "max_tokens": 8192,
+                "temperature": 0.7,
+                "max_tool_iterations": 20
+            }
+        },
+        "tools": {
+            "web": {
+                "search": {
+                    "searxng_url": "http://localhost:8080",
+                    "max_results": 5
+                }
+            },
+            "exec": {
+                "timeout": 60
+            },
+            "restrictToWorkspace": False
+        },
+        "channels": {
+            "telegram": {
+                "enabled": False,
+                "token": "",
+                "allowFrom": []
+            }
+        },
+        "gateway": {
+            "host": "0.0.0.0",
+            "port": 18790
+        }
+    }
+    
+    # Write config if it doesn't exist
+    if not config_path.exists():
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(config_path, "w") as f:
+            json.dump(default_config, f, indent=2)
+        console.print(f"[green]✓[/green] Created clean config at {config_path}")
 
 
 def _create_workspace_templates(workspace: Path):
