@@ -354,15 +354,7 @@ def channels_status():
     table.add_column("Enabled", style="green")
     table.add_column("Configuration", style="yellow")
 
-# Discord
-    dc = config.channels.discord
-    table.add_row(
-        "Discord",
-        "✓" if dc.enabled else "✗",
-        dc.gateway_url
-    )
- 
-    # Telegram
+# Telegram
     tg = config.channels.telegram
     tg_config = f"token: {tg.token[:10]}..." if tg.token else "[dim]not configured[/dim]"
     table.add_row(
@@ -435,9 +427,9 @@ def _get_bridge_dir() -> Path:
 
 @channels_app.command("login")
 def channels_login():
-    """Link device (deprecated - removed WhatsApp support)."""
-    console.print("[yellow]WhatsApp channel support has been removed.[/yellow]")
-    console.print("Available channels: Telegram, Discord")
+    """Link device (deprecated - removed WhatsApp/Discord support)."""
+    console.print("[yellow]WhatsApp and Discord channel support have been removed.[/yellow]")
+    console.print("Available channel: Telegram")
     return
 
 
@@ -505,7 +497,7 @@ def cron_add(
     at: str = typer.Option(None, "--at", help="Run once at time (ISO format)"),
     deliver: bool = typer.Option(False, "--deliver", "-d", help="Deliver response to channel"),
     to: str = typer.Option(None, "--to", help="Recipient for delivery"),
-    channel: str = typer.Option(None, "--channel", help="Channel for delivery (e.g. 'telegram', 'discord')"),
+    channel: str = typer.Option(None, "--channel", help="Channel for delivery (e.g. 'telegram')"),
 ):
     """Add a scheduled job."""
     from nanobot.config.loader import get_data_dir
