@@ -44,10 +44,10 @@ def _validate_url(url: str) -> tuple[bool, str]:
 
 
 class WebSearchTool(Tool):
-    """搜索网页（使用SearXNG实例）。"""
-
+    """Searches the web. Uses DuckDuckGo by default, SearXNG when configured."""
+    
     name = "web_search"
-    description = "Search the web via searxng instance. Returns titles, URLs, and snippets."
+    description = "Searches the web for information. Returns titles, URLs, and snippets. Uses DuckDuckGo by default, SearXNG when configured."
     parameters = {
         "type": "object",
         "properties": {
@@ -61,7 +61,7 @@ class WebSearchTool(Tool):
         },
         "required": ["query"]
     }
-
+    
     def __init__(self, searxng_url: str | None = None, max_results: int = 5):
         self.searxng_url = searxng_url.rstrip('/') if searxng_url else None
         self.max_results = max_results
@@ -70,6 +70,18 @@ class WebSearchTool(Tool):
         try:
             n = min(max(count or self.max_results, 1), 10)
             
+            # If SearXNG is configured, use it; otherwise use DuckDuckGo
+            if self.searxng_url:
+                return await self._search_searxng(query, n)
+            else:
+                return await self._search_duckduckgo(query, n)
+            
+        except Exception as e:
+            return f"Error: web search failed - {str(e)}"
+    
+    async def _search_searxng(self, query: str, n: int) -> str:
+        """Search using SearXNG instance."""
+        try:
             # searxng API参数
             params = {
                 "q": query,
@@ -91,7 +103,7 @@ class WebSearchTool(Tool):
             if not results:
                 return f"No results for: {query}"
             
-            lines = [f"Results for: {query}\n"]
+            lines = [f"Results for: {query} (via SearXNG)\n"]
             for i, item in enumerate(results, 1):
                 title = item.get('title', '')
                 url = item.get('url', '')
@@ -109,9 +121,76 @@ class WebSearchTool(Tool):
             return "\n".join(lines)
             
         except httpx.RequestError as e:
-            return f"Error: searxng connection failed - {str(e)}"
+            return f"Error: SearXNG connection failed - {str(e)}"
         except (KeyError, ValueError) as e:
-            return f"Error: invalid searxng response - {str(e)}"
+            return f"Error: invalid SearXNG response - {str(e)}"
+    
+    async def _search_duckduckgo(self, query: str, n: int) -> str:
+        """Search using DuckDuckGo."""
+        try:
+            # DuckDuckGo Instant Answer API
+            params = {
+                "q": query,
+                "format": "json",
+                "no_html": 1,
+                "kl": "wt-wt",  # Weighted title
+                "kp": -1,        # No official source
+                "kh": 1,        # Site descriptions
+                "k1": -1,        # Safe search
+                "ia": "web"        # Web results only
+                "duckduckgo_ai": 1  # Use AI features
+            }
+            
+            async with httpx.AsyncClient() as client:
+                r = await client.get(
+                    "https://duckduckgo.com/",
+                    params=params,
+                    timeout=10.0
+                )
+                r.raise_for_status()
+            
+            data = r.json()
+            
+            # DuckDuckGo has different response format
+            results = []
+            
+            # Check if it's an instant answer
+            if "AbstractText" in data:
+                instant_answer = data["AbstractText"]
+                results.append({
+                    "title": "Instant Answer",
+                    "url": "",
+                    "content": instant_answer
+                })
+            
+            # Process regular results
+            for result in data.get("Results", [])[:n]:
+                results.append({
+                    "title": result.get("Title", ""),
+                    "url": result.get("FirstURL", ""),
+                    "content": result.get("Text", "") or result.get("Snippet", "")
+                })
+            
+            if not results and not data.get("AbstractText"):
+                return f"No results for: {query}"
+            
+            lines = [f"Results for: {query} (via DuckDuckGo)\n"]
+            for i, item in enumerate(results, 1):
+                title = item["title"]
+                url = item["url"]
+                content = item["content"]
+                
+                lines.append(f"{i}. {title}")
+                lines.append(f"   {url}")
+                if content:
+                    lines.append(f"   {content}")
+            
+            return "\n".join(lines)
+            
+        except httpx.RequestError as e:
+            return f"Error: DuckDuckGo connection failed - {str(e)}"
+        except (KeyError, ValueError) as e:
+            return f"Error: invalid DuckDuckGo response - {str(e)}"
 
 class WebFetchTool(Tool):
     """Fetch and extract content from a URL using Readability."""
