@@ -206,7 +206,7 @@ nanobot supports ANY OpenAI-compatible local server, not just vLLM. Configure cu
 ```json
 {
   "providers": {
-    "ollama": {
+    "llamacpp": {
       "apiKey": "dummy",
       "apiBase": "http://localhost:11434/v1"
     }
@@ -227,7 +227,7 @@ nanobot supports ANY OpenAI-compatible local server, not just vLLM. Configure cu
 vllm serve meta-llama/Llama-3.1-8B-Instruct --port 8000
 
 # Ollama example  
-ollama serve
+llama-cpp serve
 
 # Custom server
 your-local-server --port 1234
@@ -661,8 +661,6 @@ nanobot gateway
 ```
 
 </details>
-
-<details>
 
 
 **5. Invite the bot**
