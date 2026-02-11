@@ -16,7 +16,7 @@
 
 📏 Real-time line count: **3,422 lines** (run `bash core_agent_lines.sh` to verify anytime)
 
-## 🌟 Repo Special Features
+## 🌟 Nanolocal Repo Special Features
 
 🤖 **Advanced Local Model Support** - Not just vLLM! Configure any OpenAI-compatible server with flexible settings. Customize model parameters, API endpoints, and authentication methods for complete local model control.
 
@@ -149,7 +149,9 @@ For OpenRouter - recommended for global users:
 ```
 
 > [!TIP]
-> SearXNG provides free, self-hosted web search. Deploy with `docker run -p 8080:8080 searxng/searxng:latest` or use a public instance.
+> **Free Web Search**: nanobot uses DuckDuckGo by default for basic search (no configuration needed). For advanced search with multiple engines, deploy SearXNG: `docker run -p 8080:8080 searxng/searxng:latest` and configure `searxng_url`.
+> 
+> **SearXNG Setup**: Deploy with `docker run -p 8080:8080 searxng/searxng:latest` or use a public instance. Configure in `tools.web.search.searxng_url`.
 
 **3. Chat**
 
@@ -202,7 +204,7 @@ nanobot supports ANY OpenAI-compatible local server, not just vLLM. Configure cu
 }
 ```
 
-**Ollama Integration:**
+**llama-server Integration:**
 ```json
 {
   "providers": {
@@ -226,7 +228,7 @@ nanobot supports ANY OpenAI-compatible local server, not just vLLM. Configure cu
 # vLLM example
 vllm serve meta-llama/Llama-3.1-8B-Instruct --port 8000
 
-# Ollama example  
+# llama-server example  
 llama-cpp serve
 
 # Custom server
@@ -985,27 +987,6 @@ nanobot gateway
 </details>
 
 
-**5. Invite the bot**
-- OAuth2 → URL Generator
-- Scopes: `bot`
-- Bot Permissions: `Send Messages`, `Read Message History`
-- Open the generated invite URL and add the bot to your server
-
-**6. Run**
-
-```bash
-nanobot gateway
-```
-
-</details>
-
-<details>
-
-
-> [!TIP]
-> Feishu uses WebSocket to receive messages — no webhook or public IP needed!
-
-</details>
 
 ## ⚙️ Configuration
 
@@ -1018,6 +999,8 @@ Config file: `~/.nanobot/config.json`
 
 | Provider | Purpose | Get API Key |
 |----------|---------|-------------|
+| `llama.cpp` | LLM (local, any OpenAI-compatible server) | — |
+| `lm-studio` | LLM (local, any OpenAI-compatible server) | — |
 | `openrouter` | LLM (recommended, access to all models) | [openrouter.ai](https://openrouter.ai) |
 | `anthropic` | LLM (Claude direct) | [console.anthropic.com](https://console.anthropic.com) |
 | `openai` | LLM (GPT direct) | [platform.openai.com](https://platform.openai.com) |
