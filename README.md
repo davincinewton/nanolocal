@@ -136,22 +136,12 @@ For OpenRouter - recommended for global users:
     "defaults": {
       "model": "anthropic/claude-opus-4-5"
     }
-  },
-  "tools": {
-    "web": {
-      "search": {
-        "searxng_url": "http://localhost:8080",
-        "max_results": 5
-      }
-    }
   }
 }
 ```
 
 > [!TIP]
-> **Free Web Search**: nanobot uses DuckDuckGo by default for basic search (no configuration needed). For advanced search with multiple engines, deploy SearXNG: `docker run -p 8080:8080 searxng/searxng:latest` or use a public instance. Configure in `tools.web.search.searxng_url`.
-> 
-> **DuckDuckGo Features**: Provides instant answers and AI-powered responses with better privacy. No setup required.
+> **Free Web Search**: nanobot uses DuckDuckGo by default for basic search (no configuration needed). Provides instant answers and AI-powered responses with better privacy. No setup required.
 > 
 > **SearXNG Advanced**: For users needing multiple search engines and advanced filtering.
 
