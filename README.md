@@ -43,6 +43,8 @@
 
 💎 **Easy-to-Use**: One-click to deploy and you're ready to go.
 
+🔍 **Free Web Search**: Built-in DuckDuckGo provides instant answers and AI-powered responses. Works out-of-the-box with zero configuration required. Self-hosted with complete privacy control.
+
 ## 🏗️ Architecture
 
 <p align="center">
