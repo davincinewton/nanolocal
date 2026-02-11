@@ -138,7 +138,7 @@ class WebSearchTool(Tool):
                 "kh": 1,        # Site descriptions
                 "k1": -1,        # Safe search
                 "ia": "web"        # Web results only
-                "duckduckgo_ai": 1  # Use AI features
+                "duckduckgo_ai": 1,  # Use AI features,
             }
             
             async with httpx.AsyncClient() as client:
