@@ -98,7 +98,7 @@ pip install nanobot-ai
 
 > [!TIP]
 > Set your API key in `~/.nanobot/config.json`.
-> Get API keys: [OpenRouter](https://openrouter.ai/keys) (Global) · [DashScope](https://dashscope.console.aliyun.com) (Qwen) · [SearXNG](https://github.com/searxng/searxng) (optional, for free web search)
+> Get API keys: [OpenRouter](https://openrouter.ai/keys) (Global) · [DashScope](https://dashscope.console.aliyun.com) (Qwen) · [SearXNG](https://github.com/searxng/searxng) (optional, for advanced multi-engine search)
 
 **1. Initialize**
 
@@ -124,7 +124,7 @@ For OpenRouter - recommended for global users:
 }
 ```
 
-**With SearXNG (Free Web Search):**
+**With DuckDuckGo (Default Free Web Search):**
 ```json
 {
   "providers": {
@@ -149,9 +149,11 @@ For OpenRouter - recommended for global users:
 ```
 
 > [!TIP]
-> **Free Web Search**: nanobot uses DuckDuckGo by default for basic search (no configuration needed). For advanced search with multiple engines, deploy SearXNG: `docker run -p 8080:8080 searxng/searxng:latest` and configure `searxng_url`.
+> **Free Web Search**: nanobot uses DuckDuckGo by default for basic search (no configuration needed). For advanced search with multiple engines, deploy SearXNG: `docker run -p 8080:8080 searxng/searxng:latest` or use a public instance. Configure in `tools.web.search.searxng_url`.
 > 
-> **SearXNG Setup**: Deploy with `docker run -p 8080:8080 searxng/searxng:latest` or use a public instance. Configure in `tools.web.search.searxng_url`.
+> **DuckDuckGo Features**: Provides instant answers and AI-powered responses with better privacy. No setup required.
+> 
+> **SearXNG Advanced**: For users needing multiple search engines and advanced filtering.
 
 **3. Chat**
 
