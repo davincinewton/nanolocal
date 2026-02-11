@@ -70,11 +70,27 @@ class WebSearchTool(Tool):
     async def execute(self, query: str, count: int | None = None, **kwargs) -> str:
         try:
             n = min(max(count or self.max_results, 1), 10)
-            
-            # If SearXNG is configured, use it; otherwise use DuckDuckGo via duckduckgo-search
+
+            # If SearXNG is configured, use it as primary, fallback to DuckDuckGo on failure
             if self.searxng_url:
-                return await self._search_searxng(query, n)
+                try:
+                    return await self._search_searxng(query, n)
+                except Exception as e:
+                    # Fallback to DuckDuckGo if SearXNG fails
+                    logger.debug(f"SearXNG failed, falling back to DuckDuckGo: {e}")
+                    results = DDGS().text(query, max_results=n)
+                    lines = [f"Results for: {query} (via DuckDuckGo, SearXNG fallback)\n"]
+                    for i, item in enumerate(results, 1):
+                        title = item.get("title") or item.get("Title", "")
+                        url = item.get("href") or item.get("url") or item.get("FirstURL", "")
+                        content = item.get("body") or item.get("content") or item.get("snippet","")
+                        lines.append(f"{i}. {title}")
+                        lines.append(f"   {url}")
+                        if content:
+                            lines.append(f"   {content}")
+                    return "\n".join(lines)
             else:
+                # No SearXNG configured, use DuckDuckGo directly
                 results = DDGS().text(query, max_results=n)
                 lines = [f"Results for: {query} (via DuckDuckGo)\n"]
                 for i, item in enumerate(results, 1):
@@ -86,7 +102,7 @@ class WebSearchTool(Tool):
                     if content:
                         lines.append(f"   {content}")
                 return "\n".join(lines)
-            
+
         except Exception as e:
             return f"Error: web search failed - {str(e)}"
     

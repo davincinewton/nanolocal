@@ -103,7 +103,7 @@ def _create_default_config(config_path: Path) -> None:
         "tools": {
             "web": {
                 "search": {
-                    "searxng_url": "http://localhost:8080",
+                    "searxng_url": "",
                     "max_results": 5
                 }
             },

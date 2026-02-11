@@ -200,6 +200,7 @@ class GatewayConfig(BaseModel):
 class WebSearchConfig(BaseModel):
     """Web search tool configuration."""
     api_key: str = ""  # Brave Search API key
+    searxng_url: str = ""  # SearXNG instance URL (empty = use DuckDuckGo)
     max_results: int = 5
 
 
