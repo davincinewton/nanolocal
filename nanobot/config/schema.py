@@ -190,6 +190,22 @@ class ProvidersConfig(BaseModel):
     minimax: ProviderConfig = Field(default_factory=ProviderConfig)
     aihubmix: ProviderConfig = Field(default_factory=ProviderConfig)  # AiHubMix API gateway
 
+    # Allow additional dynamic providers (lc147, lc157, etc.)
+    model_config = {"extra": "allow"}
+
+    def __getattr__(self, name: str):
+        """Dynamic access to provider configs."""
+        # Check if this is a provider in extra fields
+        extra = self.__dict__.get('__pydantic_extra__', {})
+        if name in extra:
+            value = extra[name]
+            # If it's a dict (Pydantic 2.x extra fields), convert to ProviderConfig
+            if isinstance(value, dict) and 'apiKey' in value:
+                return ProviderConfig(**value)
+            return value
+        # Return default empty provider for undefined providers
+        return ProviderConfig()
+
 
 class GatewayConfig(BaseModel):
     """Gateway/server configuration."""
@@ -254,8 +270,38 @@ class Config(BaseSettings):
 
     def get_provider(self, model: str | None = None) -> ProviderConfig | None:
         """Get matched provider config (api_key, api_base, extra_headers). Falls back to first available."""
-        p, _ = self._match_provider(model)
-        return p
+        model = (model or self.agents.defaults.model).lower()
+        p = self.providers
+        # Keyword → provider mapping (order matters: gateways first)
+        keyword_map = {
+            "aihubmix": p.aihubmix, "openrouter": p.openrouter,
+            "deepseek": p.deepseek, "anthropic": p.anthropic, "claude": p.anthropic,
+            "openai": p.openai, "gpt": p.openai, "gemini": p.gemini,
+            "zhipu": p.zhipu, "glm": p.zhipu, "zai": p.zhipu,
+            "dashscope": p.dashscope, "qwen": p.dashscope,
+            "groq": p.groq, "moonshot": p.moonshot, "kimi": p.moonshot, "vllm": p.vllm,
+        }
+        for kw, provider in keyword_map.items():
+            if kw in model and provider.api_key:
+                return provider
+
+        # Check dynamic providers (lc147, lc157, etc.)
+        extra_fields = getattr(p, '__pydantic_extra__', {})
+        for provider_name, provider_data in extra_fields.items():
+            if provider_name in model and isinstance(provider_data, dict) and provider_data.get('api_key'):
+                # Convert dict to ProviderConfig object
+                return ProviderConfig(**provider_data)
+        # Fallback: gateways first (can serve any model), then specific providers
+        all_providers = [p.openrouter, p.aihubmix, p.anthropic, p.openai, p.deepseek,
+                         p.gemini, p.zhipu, p.dashscope, p.moonshot, p.vllm, p.groq]
+
+        # Add all dynamic providers from the config (including lc147, lc157, etc.)
+        extra_fields = getattr(p, '__pydantic_extra__', {})
+        for provider_name, provider_data in extra_fields.items():
+            if isinstance(provider_data, dict) and provider_data.get('api_key'):
+                all_providers.append(ProviderConfig(**provider_data))
+
+        return next((pr for pr in all_providers if pr and pr.api_key), None)
 
     def get_provider_name(self, model: str | None = None) -> str | None:
         """Get the registry name of the matched provider (e.g. "deepseek", "openrouter")."""
