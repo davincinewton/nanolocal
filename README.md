@@ -260,46 +260,10 @@ Talk to your nanobot through Telegram, Discord, Slack, WhatsApp, Feishu, Mochat,
 |---------|-------|
 | **Telegram** | Easy (just a token) |
 | **Discord** | Easy (bot token + intents) |
-| **WhatsApp** | Medium (scan QR) |
-| **Feishu** | Medium (app credentials) |
-| **Mochat** | Medium (claw token + websocket) |
-| **DingTalk** | Medium (app credentials) |
 | **Slack** | Medium (bot + app tokens) |
 | **Email** | Medium (IMAP/SMTP credentials) |
-| **QQ** | Easy (app credentials) |
 
-<details>
-<summary><b>Telegram (Recommended)</b></summary>
 
-**1. Create a bot**
-- Open Telegram, search `@BotFather`
-- Send `/newbot`, follow prompts
-- Copy the token
-
-**2. Configure**
-
-```json
-{
-  "channels": {
-    "telegram": {
-      "enabled": true,
-      "token": "YOUR_BOT_TOKEN",
-      "allowFrom": ["YOUR_USER_ID"]
-    }
-  }
-}
-```
-
-> You can find your **User ID** in Telegram settings. It is shown as `@yourUserId`.
-> Copy this value **without the `@` symbol** and paste it into the config file.
-
-**3. Run**
-
-```bash
-nanobot gateway
-```
-
-</details>
 
 <details>
 <summary><b>Mochat (Claw IM)</b></summary>
