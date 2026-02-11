@@ -8,6 +8,7 @@ from typing import Any
 from urllib.parse import urlparse
 
 import httpx
+from duckduckgo_search import DDGS
 
 from nanobot.agent.tools.base import Tool
 
@@ -70,11 +71,21 @@ class WebSearchTool(Tool):
         try:
             n = min(max(count or self.max_results, 1), 10)
             
-            # If SearXNG is configured, use it; otherwise use DuckDuckGo
+            # If SearXNG is configured, use it; otherwise use DuckDuckGo via duckduckgo-search
             if self.searxng_url:
                 return await self._search_searxng(query, n)
             else:
-                return await self._search_duckduckgo(query, n)
+                results = DDGS().text(query, max_results=n)
+                lines = [f"Results for: {query} (via DuckDuckGo)\n"]
+                for i, item in enumerate(results, 1):
+                    title = item.get("title") or item.get("Title", "")
+                    url = item.get("href") or item.get("url") or item.get("FirstURL", "")
+                    content = item.get("body") or item.get("content") or item.get("snippet","")
+                    lines.append(f"{i}. {title}")
+                    lines.append(f"   {url}")
+                    if content:
+                        lines.append(f"   {content}")
+                return "\n".join(lines)
             
         except Exception as e:
             return f"Error: web search failed - {str(e)}"
@@ -137,7 +148,7 @@ class WebSearchTool(Tool):
                 "kp": -1,        # No official source
                 "kh": 1,        # Site descriptions
                 "k1": -1,        # Safe search
-                "ia": "web"        # Web results only
+                "ia": "web",        # Web results only
                 "duckduckgo_ai": 1,  # Use AI features,
             }
             
