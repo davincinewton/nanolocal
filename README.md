@@ -16,11 +16,11 @@
 
 📏 Real-time line count: **3,422 lines** (run `bash core_agent_lines.sh` to verify anytime)
 
-## 🌟 Nanolocal Repo Special Features
+## 🌟 Repo Special Features
 
 🤖 **Advanced Local Model Support** - Not just vLLM! Configure any OpenAI-compatible server with flexible settings. Customize model parameters, API endpoints, and authentication methods for complete local model control.
 
-🔍 **Free Web Search Engine** - Built-in SearXNG integration replaces paid APIs. Self-hosted search with multiple engines, no API costs, and enhanced privacy control.
+🔍 **Free Web Search Engine** - Built-in DuckDuckGo provides instant answers and AI-powered responses. Works out-of-the-box with zero configuration required. Self-hosted with complete privacy control.
 
 📱 **Multi-Channel Architecture** - Unified support for 10+ platforms: Telegram, Discord, Slack, WhatsApp, Feishu, QQ, Mochat, DingTalk, and Email - all with consistent API and features.
 
