@@ -174,8 +174,6 @@ class ProviderConfig(BaseModel):
     api_base: str | None = None
     extra_headers: dict[str, str] | None = None  # Custom headers (e.g. APP-Code for AiHubMix)
 
-    model_config = {"alias_generator": lambda field_name: field_name.replace("_", "")}
-
 
 class ProvidersConfig(BaseModel):
     """Configuration for LLM providers."""
