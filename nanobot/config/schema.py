@@ -281,7 +281,7 @@ class Config(BaseSettings):
         # Add all dynamic providers from the config (including lc147, lc157, etc.)
         extra_fields = getattr(p, '__pydantic_extra__', {})
         for provider_name, provider_data in extra_fields.items():
-            if isinstance(provider_data, dict) and provider_data.get('api_key'):
+            if isinstance(provider_data, dict) and (provider_data.get('api_key') or provider_data.get('api_base')):
                 all_providers.append(ProviderConfig(**provider_data))
 
         return next((pr for pr in all_providers if pr and (pr.api_key or pr.api_base)), None)
