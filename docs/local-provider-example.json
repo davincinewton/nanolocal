@@ -1,0 +1,23 @@
+# Example nanobot configuration with local LLM (Ollama example)
+
+{
+  "providers": {
+    "ollama": {
+      "apiBase": "http://localhost:11434/v1",
+      "apiKey": ""
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": "ollama/llama2",
+      "workspace": "~/.nanobot/workspace",
+      "maxTokens": 8192,
+      "temperature": 0.7,
+      "maxToolIterations": 20
+    }
+  },
+  "gateway": {
+    "host": "0.0.0.0",
+    "port": 18790
+  }
+}

@@ -174,6 +174,8 @@ class ProviderConfig(BaseModel):
     api_base: str | None = None
     extra_headers: dict[str, str] | None = None  # Custom headers (e.g. APP-Code for AiHubMix)
 
+    model_config = {"alias_generator": lambda field_name: field_name.replace("_", "")}
+
 
 class ProvidersConfig(BaseModel):
     """Configuration for LLM providers."""
@@ -195,15 +197,12 @@ class ProvidersConfig(BaseModel):
 
     def __getattr__(self, name: str):
         """Dynamic access to provider configs."""
-        # Check if this is a provider in extra fields
         extra = self.__dict__.get('__pydantic_extra__', {})
         if name in extra:
             value = extra[name]
-            # If it's a dict (Pydantic 2.x extra fields), convert to ProviderConfig
-            if isinstance(value, dict) and 'apiKey' in value:
+            if isinstance(value, dict) and ('api_key' in value or 'api_base' in value):
                 return ProviderConfig(**value)
             return value
-        # Return default empty provider for undefined providers
         return ProviderConfig()
 
 
@@ -266,13 +265,13 @@ class Config(BaseSettings):
             "groq": p.groq, "moonshot": p.moonshot, "kimi": p.moonshot, "vllm": p.vllm,
         }
         for kw, provider in keyword_map.items():
-            if kw in model and provider.api_key:
+            if kw in model and (provider.api_key or provider.api_base):
                 return provider
 
         # Check dynamic providers (lc147, lc157, etc.)
         extra_fields = getattr(p, '__pydantic_extra__', {})
         for provider_name, provider_data in extra_fields.items():
-            if provider_name in model and isinstance(provider_data, dict) and provider_data.get('api_key'):
+            if provider_name in model and isinstance(provider_data, dict) and (provider_data.get('api_key') or provider_data.get('api_base')):
                 # Convert dict to ProviderConfig object
                 return ProviderConfig(**provider_data)
         # Fallback: gateways first (can serve any model), then specific providers
@@ -285,12 +284,39 @@ class Config(BaseSettings):
             if isinstance(provider_data, dict) and provider_data.get('api_key'):
                 all_providers.append(ProviderConfig(**provider_data))
 
-        return next((pr for pr in all_providers if pr and pr.api_key), None)
+        return next((pr for pr in all_providers if pr and (pr.api_key or pr.api_base)), None)
 
     def get_provider_name(self, model: str | None = None) -> str | None:
-        """Get the registry name of the matched provider (e.g. "deepseek", "openrouter")."""
-        _, name = self._match_provider(model)
-        return name
+        """Get the name of the matched provider (e.g. "deepseek", "openrouter")."""
+        model = (model or self.agents.defaults.model).lower()
+        p = self.providers
+
+        # Check predefined providers
+        keyword_map = {
+            "aihubmix": p.aihubmix, "openrouter": p.openrouter,
+            "deepseek": p.deepseek, "anthropic": p.anthropic, "claude": p.anthropic,
+            "openai": p.openai, "gpt": p.openai, "gemini": p.gemini,
+            "zhipu": p.zhipu, "glm": p.zhipu, "zai": p.zhipu,
+            "dashscope": p.dashscope, "qwen": p.dashscope,
+            "groq": p.groq, "moonshot": p.moonshot, "kimi": p.moonshot, "vllm": p.vllm,
+        }
+        for kw, provider in keyword_map.items():
+            if kw in model and (provider.api_key or provider.api_base):
+                return kw
+
+        # Check dynamic providers
+        extra_fields = getattr(p, '__pydantic_extra__', {})
+        for provider_name, provider_data in extra_fields.items():
+            if provider_name in model and isinstance(provider_data, dict) and (provider_data.get('api_key') or provider_data.get('api_base')):
+                return provider_name
+
+        # Fallback: gateways (can serve any model)
+        for name in ["openrouter", "aihubmix"]:
+            provider = getattr(p, name)
+            if provider.api_key or provider.api_base:
+                return name
+
+        return None
 
     def get_api_key(self, model: str | None = None) -> str | None:
         """Get API key for the given model. Falls back to first available key."""

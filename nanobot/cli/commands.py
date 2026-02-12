@@ -206,14 +206,28 @@ This file stores important information that should persist across sessions.
 
 
 def _make_provider(config):
-    """Create LiteLLMProvider from config. Exits if no API key found."""
+    """Create LiteLLMProvider from config. Exits if no API key or api_base found."""
     from nanobot.providers.litellm_provider import LiteLLMProvider
     p = config.get_provider()
     model = config.agents.defaults.model
-    if not (p and p.api_key) and not model.startswith("bedrock/"):
-        console.print("[red]Error: No API key configured.[/red]")
+
+    # Check if any provider has either api_key or api_base
+    has_valid_config = False
+
+    if p:
+        if p.api_key or p.api_base:
+            has_valid_config = True
+    else:
+        # Check if api_base is set in gateway config (for local providers like vLLM)
+        api_base = config.get_api_base()
+        if api_base:
+            has_valid_config = True
+
+    if not has_valid_config and not model.startswith("bedrock/"):
+        console.print("[red]Error: No API key or api_base configured.[/red]")
         console.print("Set one in ~/.nanobot/config.json under providers section")
         raise typer.Exit(1)
+
     return LiteLLMProvider(
         api_key=p.api_key if p else None,
         api_base=config.get_api_base(),
