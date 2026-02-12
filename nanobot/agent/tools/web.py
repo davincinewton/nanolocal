@@ -8,7 +8,10 @@ from typing import Any
 from urllib.parse import urlparse
 
 import httpx
-from duckduckgo_search import DDGS
+try:
+    from ddgs import DDGS
+except ImportError:
+    from duckduckgo_search import DDGS
 
 from nanobot.agent.tools.base import Tool
 
