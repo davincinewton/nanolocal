@@ -233,6 +233,30 @@ class ToolsConfig(BaseModel):
     restrict_to_workspace: bool = False  # If true, restrict all tool access to workspace directory
 
 
+class SelfAgentConfig(BaseModel):
+    """SelfAgent configuration - internal monitoring and reasoning agent."""
+    enabled: bool = False
+    
+    # Provider configuration
+    provider: str = "openrouter"  # Which provider to use
+    model: str | None = None  # Model name, None uses main agent default
+    
+    # Runtime configuration
+    max_iterations: int = 10
+    reflection_interval: int = 300  # 5 minutes (in seconds)
+    
+    # Bootstrap files path (relative to workspace)
+    bootstrap_dir: str = "selfagent"
+    
+    # Available skills list (reserved for future use)
+    skills: list[str] = []
+    
+    # Logging configuration
+    log_file: str = "logs/selfagent.log"
+    log_level: str = "INFO"
+    console_output: bool = True  # Whether to output to console
+
+
 class Config(BaseSettings):
     """Root configuration for nanobot."""
     agents: AgentsConfig = Field(default_factory=AgentsConfig)
@@ -240,6 +264,7 @@ class Config(BaseSettings):
     providers: ProvidersConfig = Field(default_factory=ProvidersConfig)
     gateway: GatewayConfig = Field(default_factory=GatewayConfig)
     tools: ToolsConfig = Field(default_factory=ToolsConfig)
+    selfagent: SelfAgentConfig = Field(default_factory=SelfAgentConfig)
     
     @property
     def workspace_path(self) -> Path:

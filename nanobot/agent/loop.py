@@ -20,6 +20,7 @@ from nanobot.agent.tools.spawn import SpawnTool
 from nanobot.agent.tools.cron import CronTool
 from nanobot.agent.subagent import SubagentManager
 from nanobot.session.manager import SessionManager
+from typing import Callable, Awaitable
 
 
 class AgentLoop:
@@ -72,6 +73,11 @@ class AgentLoop:
         )
         
         self._running = False
+        
+        # NEW: State observers for SelfAgent monitoring
+        self._observers: list[Callable[[str, dict], Awaitable[None]]] = []
+        self._current_state: dict = {}
+        
         self._register_default_tools()
     
     def _register_default_tools(self) -> None:
@@ -106,6 +112,37 @@ class AgentLoop:
         if self.cron_service:
             self.tools.register(CronTool(self.cron_service))
     
+    def add_observer(self, callback: Callable[[str, dict], Awaitable[None]]) -> None:
+        """
+        Add a state observer for monitoring agent activities.
+        
+        Args:
+            callback: Callback function receiving (event_type, data)
+                     event_type: "message_started", "iteration_completed", 
+                                "tool_called", "message_completed", "error"
+        """
+        self._observers.append(callback)
+    
+    def remove_observer(self, callback: Callable[[str, dict], Awaitable[None]]) -> None:
+        """Remove a state observer."""
+        if callback in self._observers:
+            self._observers.remove(callback)
+    
+    async def _notify_observers(self, event: str, data: dict) -> None:
+        """Notify all observers (non-blocking)."""
+        self._current_state.update({
+            "last_event": event,
+            "last_event_time": asyncio.get_event_loop().time(),
+            "event_data": data,
+        })
+        
+        for observer in self._observers:
+            try:
+                coro = observer(event, data)
+                asyncio.create_task(coro)
+            except Exception:
+                pass  # Observer errors should not affect main flow
+    
     async def run(self) -> None:
         """Run the agent loop, processing messages from the bus."""
         self._running = True
@@ -126,6 +163,15 @@ class AgentLoop:
                         await self.bus.publish_outbound(response)
                 except Exception as e:
                     logger.error(f"Error processing message: {e}")
+                    
+                    # NEW: Notify observers of error
+                    await self._notify_observers("error", {
+                        "channel": msg.channel,
+                        "chat_id": msg.chat_id,
+                        "error": str(e),
+                        "error_type": type(e).__name__,
+                    })
+                    
                     # Send error response
                     await self.bus.publish_outbound(OutboundMessage(
                         channel=msg.channel,
@@ -157,6 +203,14 @@ class AgentLoop:
         
         preview = msg.content[:80] + "..." if len(msg.content) > 80 else msg.content
         logger.info(f"Processing message from {msg.channel}:{msg.sender_id}: {preview}")
+        
+        # NEW: Notify observers that message processing started
+        await self._notify_observers("message_started", {
+            "channel": msg.channel,
+            "chat_id": msg.chat_id,
+            "sender_id": msg.sender_id,
+            "content_preview": preview,
+        })
         
         # Get or create session
         session = self.sessions.get_or_create(msg.session_key)
@@ -219,13 +273,35 @@ class AgentLoop:
                 for tool_call in response.tool_calls:
                     args_str = json.dumps(tool_call.arguments, ensure_ascii=False)
                     logger.info(f"Tool call: {tool_call.name}({args_str[:200]})")
+                    
+                    # NEW: Notify observers of tool call
+                    await self._notify_observers("tool_called", {
+                        "name": tool_call.name,
+                        "arguments": tool_call.arguments,
+                        "iteration": iteration,
+                    })
+                    
                     result = await self.tools.execute(tool_call.name, tool_call.arguments)
                     messages = self.context.add_tool_result(
                         messages, tool_call.id, tool_call.name, result
                     )
+                
+                # NEW: Notify observers that iteration completed with tool calls
+                await self._notify_observers("iteration_completed", {
+                    "iteration": iteration,
+                    "has_tool_calls": True,
+                    "tool_count": len(response.tool_calls),
+                })
             else:
                 # No tool calls, we're done
                 final_content = response.content
+                
+                # NEW: Notify observers that iteration completed without tool calls
+                await self._notify_observers("iteration_completed", {
+                    "iteration": iteration,
+                    "has_tool_calls": False,
+                })
+                
                 break
         
         if final_content is None:
@@ -239,6 +315,14 @@ class AgentLoop:
         session.add_message("user", msg.content)
         session.add_message("assistant", final_content)
         self.sessions.save(session)
+        
+        # NEW: Notify observers that message processing completed
+        await self._notify_observers("message_completed", {
+            "channel": msg.channel,
+            "chat_id": msg.chat_id,
+            "iterations": iteration,
+            "success": True,
+        })
         
         return OutboundMessage(
             channel=msg.channel,

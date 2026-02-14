@@ -21,10 +21,40 @@ class MessageBus:
         self.outbound: asyncio.Queue[OutboundMessage] = asyncio.Queue()
         self._outbound_subscribers: dict[str, list[Callable[[OutboundMessage], Awaitable[None]]]] = {}
         self._running = False
+        
+        # NEW: Message monitors for SelfAgent observation
+        self._monitors: list[Callable[[str, InboundMessage | OutboundMessage], Awaitable[None]]] = []
+    
+    def add_monitor(self, callback: Callable[[str, InboundMessage | OutboundMessage], Awaitable[None]]) -> None:
+        """
+        Add a message monitor.
+        
+        Args:
+            callback: Callback function receiving (direction, message)
+                     direction: "inbound" or "outbound"
+        """
+        self._monitors.append(callback)
+    
+    def remove_monitor(self, callback: Callable[[str, InboundMessage | OutboundMessage], Awaitable[None]]) -> None:
+        """Remove a message monitor."""
+        if callback in self._monitors:
+            self._monitors.remove(callback)
+    
+    async def _notify_monitors(self, direction: str, msg: InboundMessage | OutboundMessage) -> None:
+        """Notify all monitors (non-blocking)."""
+        for monitor in self._monitors:
+            try:
+                # Create a coroutine and schedule it
+                coro = monitor(direction, msg)
+                asyncio.create_task(coro)
+            except Exception:
+                pass  # Monitor errors should not affect main flow
     
     async def publish_inbound(self, msg: InboundMessage) -> None:
         """Publish a message from a channel to the agent."""
         await self.inbound.put(msg)
+        # NEW: Notify monitors
+        await self._notify_monitors("inbound", msg)
     
     async def consume_inbound(self) -> InboundMessage:
         """Consume the next inbound message (blocks until available)."""
@@ -33,6 +63,8 @@ class MessageBus:
     async def publish_outbound(self, msg: OutboundMessage) -> None:
         """Publish a response from the agent to channels."""
         await self.outbound.put(msg)
+        # NEW: Notify monitors
+        await self._notify_monitors("outbound", msg)
     
     async def consume_outbound(self) -> OutboundMessage:
         """Consume the next outbound message (blocks until available)."""

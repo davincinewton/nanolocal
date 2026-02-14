@@ -282,6 +282,28 @@ def gateway(
         restrict_to_workspace=config.tools.restrict_to_workspace,
     )
     
+    # Create SelfAgent (if enabled)
+    selfagent = None
+    if config.selfagent.enabled:
+        console.print("[cyan]Creating SelfAgent...[/cyan]")
+        from nanobot.agent.selfagent import SelfAgent
+        from nanobot.providers.litellm_provider import LiteLLMProvider
+        
+        # Get provider config for SelfAgent
+        selfagent_provider_config = config.providers.get_provider(config.selfagent.model)
+        selfagent_provider = LiteLLMProvider(
+            api_key=selfagent_provider_config.api_key,
+            api_base=selfagent_provider_config.api_base,
+        )
+        
+        selfagent = SelfAgent(
+            config=config.selfagent,
+            main_loop=agent,
+            bus=bus,
+            provider=selfagent_provider,
+            workspace=config.workspace_path,
+        )
+    
     # Set cron callback (needs agent)
     async def on_cron_job(job: CronJob) -> str | None:
         """Execute a cron job through the agent."""
@@ -331,12 +353,29 @@ def gateway(
         try:
             await cron.start()
             await heartbeat.start()
+            
+            # Start main agent first
+            agent_task = asyncio.create_task(agent.run())
+            
+            # Wait briefly for agent initialization
+            await asyncio.sleep(1)
+            
+            # Start SelfAgent after main agent (if enabled)
+            if selfagent:
+                await selfagent.start()
+            
+            # Start channels
             await asyncio.gather(
-                agent.run(),
+                agent_task,
                 channels.start_all(),
             )
         except KeyboardInterrupt:
             console.print("\nShutting down...")
+            
+            # Stop SelfAgent first
+            if selfagent:
+                await selfagent.stop()
+            
             heartbeat.stop()
             cron.stop()
             agent.stop()
